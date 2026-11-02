@@ -239,3 +239,10 @@ body.swinging #train { pointer-events: none; }
 .browser-note p { margin: 0 0 12px; font-size: 0.95rem; }
 .as-link { display: block; text-align: center; text-decoration: none; box-sizing: border-box; }
 .stage-btn { margin-top: 18px; }
+
+.ver { margin: 28px 0 0; font-size: 0.75rem; color: var(--mist); }
+.err-box {
+  position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 20;
+  background: #5a1610; color: #fff; border-radius: 10px; padding: 10px 12px;
+  font-size: 0.8rem; white-space: pre-wrap; max-height: 40vh; overflow: auto;
+}

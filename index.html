@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=2026.11.03-5" />
   <script type="importmap">
     {
       "imports": {
@@ -101,6 +101,7 @@
         <a id="openChrome" class="primary as-link" href="#">Chrome で開く</a>
       </div>
     </div>
+    <p class="ver">バージョン 2026.11.03-5</p>
   </main>
 
   <!-- 練習画面 -->
@@ -221,6 +222,20 @@
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <div id="errBox" class="err-box" hidden></div>
+  <script>
+    // 読み込みや実行のエラーを画面に出す（スマホで原因を確かめるため）
+    (function () {
+      function show(msg) {
+        var b = document.getElementById('errBox');
+        if (!b) return;
+        b.hidden = false;
+        b.textContent += (b.textContent ? '\n' : '') + 'エラー: ' + msg;
+      }
+      window.addEventListener('error', function (e) { show((e.message || e.type) + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')); }, true);
+      window.addEventListener('unhandledrejection', function (e) { show(String(e.reason && e.reason.message || e.reason)); });
+    })();
+  </script>
+  <script type="module" src="app.js?v=2026.11.03-5"></script>
 </body>
 </html>

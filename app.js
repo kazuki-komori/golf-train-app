@@ -555,19 +555,18 @@ function onMotion(e) {
 
 async function requestSensors() {
   if (typeof DeviceMotionEvent === 'undefined') return 'unsupported';
-  let st = 'ok';
-  if (typeof DeviceMotionEvent.requestPermission === 'function') {
-    try {
-      const res = await DeviceMotionEvent.requestPermission();
-      if (res !== 'granted') st = 'denied';
-    } catch {
-      st = 'unknown';
-    }
-  }
-  // Android の Chrome は許可の確認がなくてもイベントが届くので、結果にかかわらず受け取りを始める
+  // Android の Chrome は許可の確認がなくてもイベントが届くので、先に受け取りを始めておく
   window.removeEventListener('devicemotion', onMotion);
   window.addEventListener('devicemotion', onMotion);
-  return st;
+  if (typeof DeviceMotionEvent.requestPermission !== 'function') return 'ok';
+  // 許可の確認は応答が返らないブラウザがあるので、時間切れで先へ進む
+  const timeout = new Promise((r) => setTimeout(() => r('timeout'), 3000));
+  try {
+    const res = await Promise.race([DeviceMotionEvent.requestPermission(), timeout]);
+    return res === 'granted' ? 'ok' : res === 'timeout' ? 'timeout' : 'denied';
+  } catch {
+    return 'unknown';
+  }
 }
 
 // ---------- ブラウザの判定（Brave はモーションセンサーを初期設定でブロックする） ----------
@@ -588,14 +587,19 @@ if (isBrave) {
 
 // ---------- 全画面・縦向き固定（振ったときに画面が回らないように） ----------
 function enterGripMode() {
-  const el = document.documentElement;
-  if (!document.fullscreenElement && el.requestFullscreen) {
-    el.requestFullscreen({ navigationUI: 'hide' })
-      .then(() => screen.orientation?.lock?.('portrait-primary'))
-      .catch(() => {});
-  } else {
-    screen.orientation?.lock?.('portrait-primary').catch(() => {});
-  }
+  try {
+    const el = document.documentElement;
+    const lock = () => {
+      try {
+        const p = screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait-primary');
+        if (p && p.catch) p.catch(() => {});
+      } catch {}
+    };
+    if (!document.fullscreenElement && el.requestFullscreen) {
+      const p = el.requestFullscreen({ navigationUI: 'hide' });
+      if (p && p.then) p.then(lock).catch(() => {});
+    } else lock();
+  } catch {}
 }
 function exitGripMode() {
   try {
@@ -642,12 +646,19 @@ $('demoOk').addEventListener('click', () => runDemo(true));
 $('demoBad').addEventListener('click', () => runDemo(false));
 
 // ---------- 画面遷移 ----------
-$('startBtn').addEventListener('click', async () => {
+$('startBtn').addEventListener('click', () => {
   readForm();
-  audio();
+  // ユーザーの操作が必要な処理（センサー許可・音・全画面）は押した直後にまとめて始める
+  const sensorP = requestSensors();
+  try {
+    audio();
+  } catch {}
+  try {
+    if ('speechSynthesis' in window) speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+  } catch {}
   enterGripMode();
-  if ('speechSynthesis' in window) speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-  const st = await requestSensors();
+
+  // 画面は待たずにすぐ切り替える
   $('setup').hidden = true;
   $('train').hidden = false;
   window.scrollTo(0, 0);
@@ -656,21 +667,24 @@ $('startBtn').addEventListener('click', async () => {
   renderHistory();
   detector.reset();
   keepAwake();
-  setTimeout(() => {
-    if (gotMotion) return;
-    $('demoOk').hidden = false;
-    $('demoBad').hidden = false;
-    let why;
-    if (isBrave) {
-      why = BRAVE_HELP;
-      $('openChrome2').hidden = !isAndroid;
-    } else if (!window.isSecureContext) why = 'センサーは https のページでしか使えません。公開しているURLから開いてください';
-    else if (st === 'unsupported') why = 'このブラウザはモーションセンサーに対応していません。Chrome で開いてください';
-    else
-      why =
-        'センサーの値が届いていません。Chrome のアドレスバー左のアイコン →「権限」（または「サイトの設定」）→「モーション センサー」を許可して、ページを再読み込みしてください。PCではデモで動きを確認できます';
-    setStage('error', 'センサーなし', why);
-  }, 2000);
+
+  sensorP.then((st) => {
+    setTimeout(() => {
+      if (gotMotion) return;
+      $('demoOk').hidden = false;
+      $('demoBad').hidden = false;
+      let why;
+      if (isBrave) {
+        why = BRAVE_HELP;
+        $('openChrome2').hidden = !isAndroid;
+      } else if (!window.isSecureContext) why = 'センサーは https のページでしか使えません。公開しているURLから開いてください';
+      else if (st === 'unsupported') why = 'このブラウザはモーションセンサーに対応していません。Chrome で開いてください';
+      else
+        why =
+          'センサーの値が届いていません。Chrome のアドレスバー左のアイコン →「権限」（または「サイトの設定」）→「モーション センサー」を許可して、ページを再読み込みしてください。PCではデモで動きを確認できます';
+      setStage('error', 'センサーなし', why);
+    }, 1500);
+  });
 });
 
 $('backBtn').addEventListener('click', () => {
