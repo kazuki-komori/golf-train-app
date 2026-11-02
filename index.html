@@ -106,10 +106,7 @@
   <!-- 練習画面 -->
   <main id="train" class="screen" hidden>
     <div class="topbar">
-      <div class="topbar-l">
-        <button id="backBtn" class="ghost" type="button">設定</button>
-        <button id="lockBtn" class="ghost" type="button">画面をロック</button>
-      </div>
+      <button id="backBtn" class="ghost" type="button">設定</button>
       <div class="streak" aria-live="polite">
         <span id="streakNum">0</span><span class="of">/<span id="goalNum">5</span></span>
         <span class="streak-label">連続合格</span>
@@ -214,14 +211,6 @@
       <button id="demoBad" class="ghost small" type="button" hidden>デモ: 悪いスイング</button>
     </div>
   </main>
-
-  <div id="lock" class="lock" hidden>
-    <div class="lock-badge">
-      <span class="lock-title">画面ロック中</span>
-      <span class="lock-sub">どこでも長押しで解除</span>
-      <span class="lock-bar"></span>
-    </div>
-  </div>
 
   <div id="goal" class="goal" hidden>
     <div>

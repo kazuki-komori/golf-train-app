@@ -232,24 +232,8 @@ button:focus-visible { outline: 3px solid var(--flag); outline-offset: 3px; }
 .goal .primary { background: var(--green); color: var(--ball); }
 .goal .ghost { margin-top: 12px; color: var(--ink); border-color: var(--ink); }
 
-/* ---------- 画面ロック ---------- */
-.topbar-l { display: flex; gap: 8px; }
-.lock {
-  position: fixed; inset: 0; z-index: 5;
-  touch-action: none; user-select: none; -webkit-user-select: none;
-  display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: max(20px, env(safe-area-inset-bottom));
-}
-.lock-badge {
-  background: rgba(13, 34, 25, 0.88); color: var(--ball);
-  border: 1.5px solid rgba(247, 248, 243, 0.4); border-radius: 14px;
-  padding: 10px 18px 12px; text-align: center; min-width: 220px; position: relative; overflow: hidden;
-}
-.lock-title { display: block; font-weight: 700; }
-.lock-sub { display: block; font-size: 0.8rem; color: var(--mist); }
-.lock-bar { position: absolute; left: 0; bottom: 0; height: 4px; width: 0; background: var(--flag); }
-.lock.holding .lock-bar { width: 100%; transition: width 1.5s linear; }
-@media (prefers-reduced-motion: reduce) { .lock.holding .lock-bar { transition-duration: 1.5s; } }
+/* 構えてから振り終わるまでは練習画面への操作を無視する（誤タップ防止） */
+body.swinging #train { pointer-events: none; }
 
 .browser-note { margin-top: 16px; border-left: 4px solid var(--flag); padding: 2px 0 2px 14px; }
 .browser-note p { margin: 0 0 12px; font-size: 0.95rem; }

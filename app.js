@@ -464,11 +464,12 @@ let resultTimer = null;
 const detector = new SwingDetector({
   getSettings: () => settings,
   onState: (s) => {
+    // 構えてから振り終わるまでは、握った手のひらが触れても反応しないようにする
+    document.body.classList.toggle('swinging', s === 'address' || s === 'swing');
     if (s === 'wait' && !resultShowing) setStage('wait', '構えて静止', 'アドレスの形で1秒止まってください');
   },
   onEvent: (e) => {
     if (e === 'address') {
-      lockScreen();
       resultShowing = false;
       setStage('address', 'どうぞ', 'ゆっくり上げて、振り抜いてください');
       sfx.address();
@@ -492,6 +493,8 @@ const detector = new SwingDetector({
   },
 });
 function handleResult(r) {
+  // 前の結果を読んでスクロールしていても、今回の合否が見えるように先頭へ戻す
+  if (stage.getBoundingClientRect().bottom < 0) window.scrollTo({ top: 0, behavior: 'smooth' });
   history.push({ pass: r.pass, tempo: r.tempo, face: r.face, plane: r.planeDev });
   saveHistory();
   renderCard(r);
@@ -503,7 +506,6 @@ function handleResult(r) {
       sfx.goal();
       say(`${streak}回連続で合格です`);
       $('goalBig').textContent = streak;
-      unlockScreen();
       $('goal').hidden = false;
       $('goalHarder').hidden = settings.level === 'strict';
       return;
@@ -602,33 +604,6 @@ function exitGripMode() {
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
 
-// ---------- 画面ロック（握った手のひらで誤タップしないように） ----------
-const lockEl = $('lock');
-let lockTimer = null;
-function lockScreen() {
-  if (!$('train').hidden && $('goal').hidden) lockEl.hidden = false;
-}
-function unlockScreen() {
-  lockEl.hidden = true;
-  lockEl.classList.remove('holding');
-}
-lockEl.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  lockEl.classList.add('holding');
-  clearTimeout(lockTimer);
-  lockTimer = setTimeout(() => {
-    unlockScreen();
-    buzz(40);
-  }, 1500);
-});
-for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
-  lockEl.addEventListener(ev, () => {
-    clearTimeout(lockTimer);
-    lockEl.classList.remove('holding');
-  });
-}
-lockEl.addEventListener('contextmenu', (e) => e.preventDefault());
-$('lockBtn').addEventListener('click', lockScreen);
 
 let wakeLock = null;
 async function keepAwake() {
@@ -681,10 +656,8 @@ $('startBtn').addEventListener('click', async () => {
   renderHistory();
   detector.reset();
   keepAwake();
-  lockScreen();
   setTimeout(() => {
     if (gotMotion) return;
-    unlockScreen();
     $('demoOk').hidden = false;
     $('demoBad').hidden = false;
     let why;
@@ -701,7 +674,6 @@ $('startBtn').addEventListener('click', async () => {
 });
 
 $('backBtn').addEventListener('click', () => {
-  unlockScreen();
   exitGripMode();
   $('train').hidden = true;
   $('setup').hidden = false;
