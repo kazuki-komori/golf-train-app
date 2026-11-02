@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#123d2c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>グリップ・スイングトレーナー</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- 設定画面 -->
+  <main id="setup" class="screen">
+    <header class="setup-head">
+      <h1>グリップ・<br />スイングトレーナー</h1>
+      <p class="lead">スマホをクラブのグリップとして握って素振りします。フェースの向き・テンポ・軌道が基準に入るまで、合格になりません。</p>
+    </header>
+
+    <section class="hold">
+      <svg viewBox="0 0 120 180" class="hold-fig" aria-hidden="true">
+        <rect x="38" y="10" width="44" height="90" rx="8" fill="#f7f8f3" stroke="#123d2c" stroke-width="3" />
+        <rect x="44" y="20" width="32" height="64" rx="3" fill="#c9dccd" />
+        <line x1="60" y1="100" x2="60" y2="168" stroke="#f7f8f3" stroke-width="3" stroke-dasharray="5 5" />
+        <path d="M50 160 h24 l6 10 h-36 z" fill="#f7f8f3" />
+        <text x="60" y="56" text-anchor="middle" font-size="11" fill="#123d2c">画面</text>
+        <text x="60" y="70" text-anchor="middle" font-size="11" fill="#123d2c">目標側</text>
+      </svg>
+      <ol class="steps">
+        <li>スマホの<strong>上端を地面側</strong>に向け、長い辺をシャフトに見立てて両手で握る</li>
+        <li><strong>画面を目標方向</strong>（右打ちなら左）に向けてアドレス</li>
+        <li>1秒静止すると「ピッ」と鳴る。そこから素振り</li>
+      </ol>
+    </section>
+
+    <form id="settings" class="settings">
+      <fieldset>
+        <legend>利き手</legend>
+        <div class="seg">
+          <label><input type="radio" name="handed" value="right" checked /><span>右打ち</span></label>
+          <label><input type="radio" name="handed" value="left" /><span>左打ち</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>想定するクラブ<small class="legend-sub">ボールの飛び方の計算に使います</small></legend>
+        <div class="seg">
+          <label><input type="radio" name="club" value="driver" checked /><span>ドライバー</span></label>
+          <label><input type="radio" name="club" value="iron7" /><span>7番アイアン</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>判定の厳しさ</legend>
+        <div class="seg">
+          <label><input type="radio" name="level" value="easy" /><span>やさしい</span></label>
+          <label><input type="radio" name="level" value="normal" checked /><span>標準</span></label>
+          <label><input type="radio" name="level" value="strict" /><span>厳しい</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>判定する項目</legend>
+        <label class="check"><input type="checkbox" name="face" checked /><span>フェース角<small>インパクトで構えた時の向きに戻っているか</small></span></label>
+        <label class="check"><input type="checkbox" name="tempo" checked /><span>テンポ<small>バックスイングとダウンスイングの時間比</small></span></label>
+        <label class="check"><input type="checkbox" name="plane" checked /><span>軌道<small>上げた面と下ろした面のずれ</small></span></label>
+        <label class="check"><input type="checkbox" name="path" checked /><span>クラブの通り道<small>インパクトで目標ラインに沿って振れているか</small></span></label>
+      </fieldset>
+
+      <fieldset class="row2">
+        <label class="num">目標テンポ
+          <span><input type="number" name="targetTempo" min="2" max="4" step="0.1" value="3.0" inputmode="decimal" /> : 1</span>
+        </label>
+        <label class="num">合格に必要な連続回数
+          <span><input type="number" name="goalStreak" min="1" max="20" step="1" value="5" inputmode="numeric" /> 回</span>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>音</legend>
+        <label class="check"><input type="checkbox" name="voice" checked /><span>音声で理由を読み上げる</span></label>
+        <label class="check"><input type="checkbox" name="rhythmGuide" /><span>リズムガイド<small>静止後に「始動・トップ・インパクト」の3音を鳴らす</small></span></label>
+        <label class="check"><input type="checkbox" name="invertFace" /><span>フェースの開き／閉じを逆に判定<small>判定が逆に出るときだけ使う</small></span></label>
+      </fieldset>
+    </form>
+
+    <div class="actions">
+      <button id="startBtn" class="primary" type="button">練習を始める</button>
+      <p id="sensorNote" class="note" hidden></p>
+    </div>
+  </main>
+
+  <!-- 練習画面 -->
+  <main id="train" class="screen" hidden>
+    <div class="topbar">
+      <button id="backBtn" class="ghost" type="button">設定</button>
+      <div class="streak" aria-live="polite">
+        <span id="streakNum">0</span><span class="of">/<span id="goalNum">5</span></span>
+        <span class="streak-label">連続合格</span>
+      </div>
+    </div>
+
+    <section id="stage" class="stage" data-mode="wait">
+      <p id="stageMain" class="stage-main">構えて静止</p>
+      <p id="stageSub" class="stage-sub">アドレスの形で1秒止まってください</p>
+    </section>
+
+    <section id="card" class="card" hidden>
+      <table class="score">
+        <tbody id="scoreBody"></tbody>
+      </table>
+
+      <h2 class="sec">このスイングだと、ボールはこう飛びます</h2>
+      <p id="flightName" class="flight-name">-</p>
+      <p id="flightText" class="flight-text"></p>
+      <div id="flight3d" class="view3d"></div>
+      <div class="view-ctrl">
+        <div class="seg seg-sm" role="group" aria-label="弾道を見る向き">
+          <label><input type="radio" name="fcam" value="behind" checked /><span>後ろから</span></label>
+          <label><input type="radio" name="fcam" value="chase" /><span>ボールを追う</span></label>
+          <label><input type="radio" name="fcam" value="top" /><span>真上から</span></label>
+        </div>
+        <button id="flightPlay" class="ghost" type="button">もう一度</button>
+      </div>
+      <dl class="tiles tiles-3">
+        <div><dt>キャリー</dt><dd id="fCarry">-</dd></div>
+        <div><dt>止まった所</dt><dd id="fTotal">-</dd></div>
+        <div><dt>左右のずれ</dt><dd id="fOff">-</dd></div>
+        <div><dt>打ち出し</dt><dd id="fLaunch">-</dd></div>
+        <div><dt>スピン</dt><dd id="fSpin">-</dd></div>
+        <div><dt>最高到達点</dt><dd id="fApex">-</dd></div>
+      </dl>
+
+      <h2 class="sec">インパクトの瞬間（真上から）</h2>
+      <div class="impact">
+        <canvas id="impactCv" width="520" height="520" aria-label="インパクトでのクラブの通り道とフェースの向き"></canvas>
+        <div class="impact-side">
+          <p id="impactText" class="impact-text"></p>
+          <table class="matrix" aria-label="球筋の早見表">
+            <thead><tr><th></th><th id="mcL">左へ曲がる</th><th>まっすぐ</th><th id="mcR">右へ曲がる</th></tr></thead>
+            <tbody id="matrixBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <h2 class="sec">スイングの軌道</h2>
+      <p class="hint">点線と半透明の板がお手本、太い線があなたのヘッドの通り道です。下ろす線は、お手本の面に近いほど緑、離れるほど黄・赤になります。指でドラッグすると回せます。</p>
+      <div id="view3d" class="view3d"></div>
+      <p id="view3dNote" class="note" hidden></p>
+      <div class="view-ctrl">
+        <div class="seg seg-sm" role="group" aria-label="見る向き">
+          <label><input type="radio" name="cam" value="dtl" checked /><span>後ろから</span></label>
+          <label><input type="radio" name="cam" value="face" /><span>正面から</span></label>
+          <label><input type="radio" name="cam" value="top" /><span>真上から</span></label>
+        </div>
+        <button id="playBtn" class="ghost" type="button">スロー再生</button>
+      </div>
+      <div class="layer-ctrl">
+        <label><input type="checkbox" data-layer="back" checked /><span class="lg lg-back"></span>上げる</label>
+        <label><input type="checkbox" data-layer="down" checked /><span class="lg lg-down"></span>下ろす</label>
+        <label><input type="checkbox" data-layer="follow" checked /><span class="lg lg-follow"></span>振り抜き</label>
+        <label><input type="checkbox" data-layer="ideal" checked /><span class="lg lg-ideal"></span>お手本</label>
+      </div>
+      <p id="devText" class="dev-text"></p>
+
+      <h2 class="sec">数値</h2>
+      <dl class="tiles" id="tiles">
+        <div data-k="path"><dt>クラブの通り道</dt><dd id="xPath">-</dd></div>
+        <div data-k="face"><dt>フェースの向き</dt><dd id="xFace">-</dd></div>
+        <div data-k="f2p"><dt>フェースと通り道の差</dt><dd id="xF2P">-</dd></div>
+        <div data-k="attack"><dt>入射角</dt><dd id="xAttack">-</dd></div>
+        <div data-k="hs"><dt>推定ヘッドスピード</dt><dd id="xHs">-</dd></div>
+        <div data-k="tempo"><dt>テンポ</dt><dd id="xTempo">-</dd></div>
+        <div><dt>バックスイング</dt><dd id="xBack">-</dd></div>
+        <div><dt>ダウンスイング</dt><dd id="xDown">-</dd></div>
+      </dl>
+      <details class="more">
+        <summary>くわしいグラフ</summary>
+        <canvas id="trace" width="640" height="220" aria-label="スイング角とフェース角の推移"></canvas>
+        <p class="legend"><span class="lg lg-s"></span>スイング角 <span class="lg lg-f"></span>フェース角（上が開き）</p>
+      </details>
+
+      <h2 class="sec">直し方のコツ</h2>
+      <div id="tips" class="tips"></div>
+    </section>
+
+    <section class="history">
+      <h2>今日の記録</h2>
+      <p id="histSummary" class="hist-summary">まだ記録がありません。構えて素振りしてください。</p>
+      <ol id="histList" class="hist-list"></ol>
+      <button id="clearBtn" class="ghost small" type="button">記録を消す</button>
+    </section>
+
+    <div class="dev">
+      <span id="live">0 deg/s</span>
+      <button id="demoOk" class="ghost small" type="button" hidden>デモ: 良いスイング</button>
+      <button id="demoBad" class="ghost small" type="button" hidden>デモ: 悪いスイング</button>
+    </div>
+  </main>
+
+  <div id="goal" class="goal" hidden>
+    <div>
+      <p class="goal-num" id="goalBig">5</p>
+      <p class="goal-text">回連続で合格しました</p>
+      <button id="goalNext" class="primary" type="button">もう一度挑戦する</button>
+      <button id="goalHarder" class="ghost" type="button">厳しさを1段上げて続ける</button>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
