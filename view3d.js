@@ -74,6 +74,9 @@ class BaseView {
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.05, far);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
+    // スマホでは1本指はページのスクロールに使い、2本指で回転・拡大する
+    this.controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE };
+    this.renderer.domElement.style.touchAction = 'pan-y';
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x224433, 2.2));
     const sun = new THREE.DirectionalLight(0xffffff, 1.4);
     sun.position.set(2, 5, 3);

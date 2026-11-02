@@ -103,7 +103,10 @@
   <!-- 練習画面 -->
   <main id="train" class="screen" hidden>
     <div class="topbar">
-      <button id="backBtn" class="ghost" type="button">設定</button>
+      <div class="topbar-l">
+        <button id="backBtn" class="ghost" type="button">設定</button>
+        <button id="lockBtn" class="ghost" type="button">画面をロック</button>
+      </div>
       <div class="streak" aria-live="polite">
         <span id="streakNum">0</span><span class="of">/<span id="goalNum">5</span></span>
         <span class="streak-label">連続合格</span>
@@ -154,7 +157,7 @@
       </div>
 
       <h2 class="sec">スイングの軌道</h2>
-      <p class="hint">点線と半透明の板がお手本、太い線があなたのヘッドの通り道です。下ろす線は、お手本の面に近いほど緑、離れるほど黄・赤になります。指でドラッグすると回せます。</p>
+      <p class="hint">点線と半透明の板がお手本、太い線があなたのヘッドの通り道です。下ろす線は、お手本の面に近いほど緑、離れるほど黄・赤になります。2本指でドラッグすると回せます（PCはマウスで）。</p>
       <div id="view3d" class="view3d"></div>
       <p id="view3dNote" class="note" hidden></p>
       <div class="view-ctrl">
@@ -207,6 +210,14 @@
       <button id="demoBad" class="ghost small" type="button" hidden>デモ: 悪いスイング</button>
     </div>
   </main>
+
+  <div id="lock" class="lock" hidden>
+    <div class="lock-badge">
+      <span class="lock-title">画面ロック中</span>
+      <span class="lock-sub">どこでも長押しで解除</span>
+      <span class="lock-bar"></span>
+    </div>
+  </div>
 
   <div id="goal" class="goal" hidden>
     <div>

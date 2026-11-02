@@ -77,11 +77,21 @@ const sfx = {
   fail: () => { tone(160, 0.45, 'sawtooth', 0.4); tone(150, 0.45, 'square', 0.15); },
   goal: () => [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.2, 'sine', 0.3, i * 0.13)),
 };
+let jaVoice = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices();
+  jaVoice = vs.find((v) => v.lang === 'ja-JP' && /Google/.test(v.name)) || vs.find((v) => /^ja/.test(v.lang)) || null;
+}
+if ('speechSynthesis' in window) {
+  pickVoice();
+  speechSynthesis.addEventListener?.('voiceschanged', pickVoice);
+}
 function say(text) {
   if (!settings.voice || !text || !('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ja-JP';
+  if (jaVoice) u.voice = jaVoice;
   u.rate = 1.1;
   speechSynthesis.speak(u);
 }
@@ -458,6 +468,7 @@ const detector = new SwingDetector({
   },
   onEvent: (e) => {
     if (e === 'address') {
+      lockScreen();
       resultShowing = false;
       setStage('address', 'どうぞ', 'ゆっくり上げて、振り抜いてください');
       sfx.address();
@@ -492,6 +503,7 @@ function handleResult(r) {
       sfx.goal();
       say(`${streak}回連続で合格です`);
       $('goalBig').textContent = streak;
+      unlockScreen();
       $('goal').hidden = false;
       $('goalHarder').hidden = settings.level === 'strict';
       return;
@@ -514,34 +526,92 @@ function handleResult(r) {
 
 // ---------- センサー ----------
 let lastLive = 0;
+let rateCount = 0;
+let rateT0 = 0;
+let sensorHz = 0;
 let gotMotion = false;
 function onMotion(e) {
   const rr = e.rotationRate;
   if (!rr || (rr.alpha == null && rr.beta == null && rr.gamma == null)) return;
   gotMotion = true;
   const t = (e.timeStamp || performance.now()) / 1000;
+  rateCount++;
+  if (t - rateT0 >= 1) {
+    sensorHz = Math.round(rateCount / (t - rateT0));
+    rateCount = 0;
+    rateT0 = t;
+  }
   const w = rateToVec(rr);
   const g = e.accelerationIncludingGravity;
   detector.push(t, w, g && g.x != null ? [g.x, g.y, g.z] : null);
   if (t - lastLive > 0.1) {
     lastLive = t;
-    $('live').textContent = `${Math.round(Math.hypot(...w))} deg/s`;
+    $('live').textContent = `センサー ${sensorHz}Hz  ${Math.round(Math.hypot(...w))}°/秒`;
   }
 }
 
 async function requestSensors() {
   if (typeof DeviceMotionEvent === 'undefined') return 'unsupported';
+  let st = 'ok';
   if (typeof DeviceMotionEvent.requestPermission === 'function') {
     try {
       const res = await DeviceMotionEvent.requestPermission();
-      if (res !== 'granted') return 'denied';
+      if (res !== 'granted') st = 'denied';
     } catch {
-      return 'denied';
+      st = 'unknown';
     }
   }
+  // Android の Chrome は許可の確認がなくてもイベントが届くので、結果にかかわらず受け取りを始める
+  window.removeEventListener('devicemotion', onMotion);
   window.addEventListener('devicemotion', onMotion);
-  return 'ok';
+  return st;
 }
+
+// ---------- 全画面・縦向き固定（振ったときに画面が回らないように） ----------
+function enterGripMode() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement && el.requestFullscreen) {
+    el.requestFullscreen({ navigationUI: 'hide' })
+      .then(() => screen.orientation?.lock?.('portrait-primary'))
+      .catch(() => {});
+  } else {
+    screen.orientation?.lock?.('portrait-primary').catch(() => {});
+  }
+}
+function exitGripMode() {
+  try {
+    screen.orientation?.unlock?.();
+  } catch {}
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+
+// ---------- 画面ロック（握った手のひらで誤タップしないように） ----------
+const lockEl = $('lock');
+let lockTimer = null;
+function lockScreen() {
+  if (!$('train').hidden && $('goal').hidden) lockEl.hidden = false;
+}
+function unlockScreen() {
+  lockEl.hidden = true;
+  lockEl.classList.remove('holding');
+}
+lockEl.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  lockEl.classList.add('holding');
+  clearTimeout(lockTimer);
+  lockTimer = setTimeout(() => {
+    unlockScreen();
+    buzz(40);
+  }, 1500);
+});
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
+  lockEl.addEventListener(ev, () => {
+    clearTimeout(lockTimer);
+    lockEl.classList.remove('holding');
+  });
+}
+lockEl.addEventListener('contextmenu', (e) => e.preventDefault());
+$('lockBtn').addEventListener('click', lockScreen);
 
 let wakeLock = null;
 async function keepAwake() {
@@ -583,28 +653,36 @@ $('demoBad').addEventListener('click', () => runDemo(false));
 $('startBtn').addEventListener('click', async () => {
   readForm();
   audio();
+  enterGripMode();
   if ('speechSynthesis' in window) speechSynthesis.speak(new SpeechSynthesisUtterance(''));
   const st = await requestSensors();
-  let why = 'この端末ではモーションセンサーが使えません。デモで動きを確認できます';
-  if (st === 'denied') why = 'モーションセンサーが許可されていません。iPhoneはページを開き直して「許可」を選んでください';
-  else if (!window.isSecureContext) why = 'センサーは https のページでしか使えません。README の手順で公開してください';
   $('setup').hidden = true;
   $('train').hidden = false;
+  window.scrollTo(0, 0);
   streak = 0;
   renderStreak();
   renderHistory();
   detector.reset();
   keepAwake();
+  lockScreen();
   setTimeout(() => {
-    if (!gotMotion) {
-      $('demoOk').hidden = false;
-      $('demoBad').hidden = false;
-      setStage('error', 'センサーなし', why);
-    }
-  }, 1500);
+    if (gotMotion) return;
+    unlockScreen();
+    $('demoOk').hidden = false;
+    $('demoBad').hidden = false;
+    let why;
+    if (!window.isSecureContext) why = 'センサーは https のページでしか使えません。公開しているURLから開いてください';
+    else if (st === 'unsupported') why = 'このブラウザはモーションセンサーに対応していません。Chrome で開いてください';
+    else
+      why =
+        'センサーの値が届いていません。Chrome のアドレスバー左のアイコン →「権限」（または「サイトの設定」）→「モーション センサー」を許可して、ページを再読み込みしてください。PCではデモで動きを確認できます';
+    setStage('error', 'センサーなし', why);
+  }, 2000);
 });
 
 $('backBtn').addEventListener('click', () => {
+  unlockScreen();
+  exitGripMode();
   $('train').hidden = true;
   $('setup').hidden = false;
   window.scrollTo(0, 0);
