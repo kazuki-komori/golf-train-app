@@ -533,6 +533,7 @@ let gotMotion = false;
 function onMotion(e) {
   const rr = e.rotationRate;
   if (!rr || (rr.alpha == null && rr.beta == null && rr.gamma == null)) return;
+  if (!gotMotion) $('openChrome2').hidden = true;
   gotMotion = true;
   const t = (e.timeStamp || performance.now()) / 1000;
   rateCount++;
@@ -565,6 +566,22 @@ async function requestSensors() {
   window.removeEventListener('devicemotion', onMotion);
   window.addEventListener('devicemotion', onMotion);
   return st;
+}
+
+// ---------- ブラウザの判定（Brave はモーションセンサーを初期設定でブロックする） ----------
+const isAndroid = /Android/i.test(navigator.userAgent);
+const isBrave = !!navigator.brave;
+const chromeUrl = `intent://${location.host}${location.pathname}#Intent;scheme=https;package=com.android.chrome;end`;
+const BRAVE_HELP =
+  'Brave はモーションセンサーを初期設定でブロックしています。Brave のメニュー →「設定」→「サイトの設定」→「モーションセンサー」でこのサイトを許可して、ページを再読み込みしてください。それでも動かないときは Chrome で開いてください。';
+for (const id of ['openChrome', 'openChrome2']) {
+  const a = $(id);
+  a.href = chromeUrl;
+}
+if (isBrave) {
+  $('browserNote').hidden = false;
+  $('browserNoteText').textContent = BRAVE_HELP;
+  $('openChrome').hidden = !isAndroid;
 }
 
 // ---------- 全画面・縦向き固定（振ったときに画面が回らないように） ----------
@@ -671,7 +688,10 @@ $('startBtn').addEventListener('click', async () => {
     $('demoOk').hidden = false;
     $('demoBad').hidden = false;
     let why;
-    if (!window.isSecureContext) why = 'センサーは https のページでしか使えません。公開しているURLから開いてください';
+    if (isBrave) {
+      why = BRAVE_HELP;
+      $('openChrome2').hidden = !isAndroid;
+    } else if (!window.isSecureContext) why = 'センサーは https のページでしか使えません。公開しているURLから開いてください';
     else if (st === 'unsupported') why = 'このブラウザはモーションセンサーに対応していません。Chrome で開いてください';
     else
       why =

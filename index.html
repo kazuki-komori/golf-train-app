@@ -96,7 +96,10 @@
 
     <div class="actions">
       <button id="startBtn" class="primary" type="button">練習を始める</button>
-      <p id="sensorNote" class="note" hidden></p>
+      <div id="browserNote" class="browser-note" hidden>
+        <p id="browserNoteText"></p>
+        <a id="openChrome" class="primary as-link" href="#">Chrome で開く</a>
+      </div>
     </div>
   </main>
 
@@ -116,6 +119,7 @@
     <section id="stage" class="stage" data-mode="wait">
       <p id="stageMain" class="stage-main">構えて静止</p>
       <p id="stageSub" class="stage-sub">アドレスの形で1秒止まってください</p>
+      <a id="openChrome2" class="primary as-link stage-btn" href="#" hidden>Chrome で開く</a>
     </section>
 
     <section id="card" class="card" hidden>
