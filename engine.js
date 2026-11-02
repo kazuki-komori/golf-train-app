@@ -5,9 +5,9 @@
 // スマホの長辺(y軸) = シャフト。上端をヘッド側（地面側）に向けて握る想定。
 
 export const LEVELS = {
-  easy: { label: 'やさしい', face: 15, tempoTol: 0.6, plane: 25, path: 8 },
-  normal: { label: '標準', face: 10, tempoTol: 0.4, plane: 18, path: 5 },
-  strict: { label: '厳しい', face: 6, tempoTol: 0.25, plane: 12, path: 3 },
+  easy: { label: 'やさしい', face: 10, tempoTol: 0.6, plane: 25, path: 8 },
+  normal: { label: '標準', face: 6, tempoTol: 0.4, plane: 18, path: 5 },
+  strict: { label: '厳しい', face: 3, tempoTol: 0.25, plane: 12, path: 3 },
 };
 
 // 3D推定の体のモデル(m)。胸の中心から腕、その先にクラブ。
@@ -281,7 +281,10 @@ export function analyzeSwing(samples, settings = DEFAULT_SETTINGS, gravity = nul
     const lerpDir = (arr) => normalize(add(scale(arr[kImp - 1], 1 - fImp), scale(arr[kImp], fImp)));
     const shI = lerpDir(shaft);
     const armI = lerpDir(armDir);
-    const wI = scale(qRotate(qs[kImp - 1], samples[kImp].w), D2R);
+    // ジャイロ値は区間の平均なので、インパクト時刻に合わせて前後の区間を補間する
+    const wAt = (k) => qRotate(qs[k - 1], samples[k].w);
+    const kN = Math.min(n - 1, kImp + 1);
+    const wI = scale(fImp < 0.5 ? add(scale(wAt(kImp - 1 > 0 ? kImp - 1 : kImp), 0.5 - fImp), scale(wAt(kImp), 0.5 + fImp)) : add(scale(wAt(kImp), 1.5 - fImp), scale(wAt(kN), fImp - 0.5)), D2R);
     const vImpRaw = add(scale(cross(wI, shI), CLUB), scale(cross(scale(armW[kImp], D2R), armI), ARM));
     const toW = (v) => [dot(v, tgt), dot(v, up), dot(v, fwd)];
     const sh0W = toW(sh0);

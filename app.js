@@ -558,7 +558,7 @@ let demoTimer = null;
 function runDemo(good) {
   clearInterval(demoTimer);
   const opts = good
-    ? { back: 0.8, down: 0.27, face: 2 }
+    ? { back: 0.8, down: 0.27, face: 0 }
     : { back: 0.45, down: 0.3, face: 6, planeTilt: 12 };
   const still = Array.from({ length: 70 }, (_, i) => ({ t: i / 60, w: [1, -1, 0.5] }));
   opts.dir = settings.handed === 'left' ? 1 : -1;
